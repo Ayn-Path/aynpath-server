@@ -37,7 +37,7 @@ curl -X POST http://127.0.0.1:5000/predict_location \
 (4) Example Response
 ```json
 {
-  "predicted_location": "hallway_cafe",
+  "predicted_location": "musolla",
   "good_matches": 120,
   "elapsed_time_sec": 0.85
 }
