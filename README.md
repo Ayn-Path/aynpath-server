@@ -43,6 +43,6 @@ curl -X POST http://127.0.0.1:5000/predict_location \
 }
 ```
 ## Limitations
-* Works only with Ayn-Path dataset (IIUM environment)
+* Works only with [Ayn-Path dataset](https://github.com/Ayn-Path/aynpath-datasets) (IIUM environment)
 * Accuracy depends on lighting and camera angle
 * Processing speed varies with device performance
