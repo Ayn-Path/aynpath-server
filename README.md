@@ -34,7 +34,7 @@ curl -X POST http://127.0.0.1:5000/predict_location \
   -F "image=@sample.jpg"
 ```
 
-(3)Example Response
+(4) Example Response
 ```json
 {
   "predicted_location": "hallway_cafe",
