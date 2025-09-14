@@ -6,8 +6,7 @@ This repository contains the backend service for indoor localization and navigat
 
 ## Features
 
-* ORB-based image feature matching  
-* Location classification (classical ML or CNN)  
+* ORB-based image feature matching    
 * Flask REST API for communication with Ayn-Path mobile app  
 
 ## Requirements
@@ -15,7 +14,6 @@ This repository contains the backend service for indoor localization and navigat
 - Flask  
 - OpenCV  
 - NumPy
-
 
 ## Usage
 (1) Start the server
