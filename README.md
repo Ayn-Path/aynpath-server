@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains the backend service for indoor localization and navigation by providing a Flask API named (/predict_location) that receives an image from the user, extracts ORB features, and matches them against a precomputed database of descriptors to predict the user’s current location. Returns the predicted location, number of good matches, and processing time.
+This repository contains the backend service for indoor localization and navigation by providing a Flask API named (/predict_location) that receives an image from the user, extracts ORB features, and matches them against a precomputed database of descriptors to predict the user’s current location, returns the predicted location, number of good matches, and processing time.
 
 ## Features
 
@@ -42,7 +42,7 @@ curl -X POST http://127.0.0.1:5000/predict_location \
   "elapsed_time_sec": 0.85
 }
 ```
-## Limitations
+## Notes/Limitations 
 * Works only with [Ayn-Path dataset](https://github.com/Ayn-Path/aynpath-datasets) (IIUM environment)
 * Accuracy depends on lighting and camera angle
 * Processing speed varies with device performance
