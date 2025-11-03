@@ -21,7 +21,7 @@ if not os.path.exists(FEATURES_DIR):
     print("Extracting zip...")
     with zipfile.ZipFile(ZIP_PATH, 'r') as zip_ref:
         zip_ref.extractall(".")
-    print("✅ Features extracted successfully!\n")
+    print("Features extracted successfully!\n")
 
 # --- Configuration ---
 MAX_DB_DESCRIPTORS = 200000
