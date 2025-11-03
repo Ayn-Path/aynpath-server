@@ -2,17 +2,38 @@ import os
 import cv2
 import numpy as np
 import time
+import zipfile
+import gdown
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# === Config ===
+# === Google Drive ZIP setup ===
+DRIVE_FILE_ID = "12jW_xT_ukUGa4TO5UL54prg6GP_ja-8c"
+ZIP_PATH = "features_npz.zip"
 FEATURES_DIR = "features_npz"
-MAX_DB_DESCRIPTORS = 50000  # Can now safely increase
+
+# --- Download & extract once ---
+if not os.path.exists(FEATURES_DIR):
+    print("Downloading features from Google Drive using gdown...")
+    url = f"https://drive.google.com/uc?id={DRIVE_FILE_ID}"
+    gdown.download(url, ZIP_PATH, quiet=False)
+
+    print("Validating zip file...")
+    if not zipfile.is_zipfile(ZIP_PATH):
+        raise RuntimeError("Downloaded file is not a valid ZIP. Check your Google Drive file.")
+
+    print("Extracting zip...")
+    with zipfile.ZipFile(ZIP_PATH, 'r') as zip_ref:
+        zip_ref.extractall(".")
+    print("Features extracted successfully!\n")
+
+# --- Config ---
+MAX_DB_DESCRIPTORS = 50000
 RATIO_THRESH = 0.75
 orb = cv2.ORB_create(nfeatures=1000)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
 
-# --- Load list of available locations only ---
+# --- Lazy-load descriptors ---
 available_locations = []
 for file in os.listdir(FEATURES_DIR):
     if file.endswith("_features.npz"):
@@ -20,11 +41,9 @@ for file in os.listdir(FEATURES_DIR):
         available_locations.append(loc)
 print(f"✅ Available locations: {available_locations}")
 
-# --- Cache for descriptors (lazy-load) ---
 db_cache = {}
 
 def load_descriptors(loc):
-    """Load descriptors for a location, limit by MAX_DB_DESCRIPTORS."""
     if loc in db_cache:
         return db_cache[loc]
     path = os.path.join(FEATURES_DIR, f"{loc}_features.npz")
@@ -39,12 +58,10 @@ def recognize_location_from_image(img):
     start_time = time.time()
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     kp, des_query = orb.detectAndCompute(gray, None)
-
     if des_query is None or len(des_query) == 0:
         return None, 0, time.time() - start_time
 
     best_loc, best_score = None, 0
-    # Lazy-load descriptors per location
     for loc in available_locations:
         des_db = load_descriptors(loc)
         matches = bf.knnMatch(des_query, des_db, k=2)
@@ -74,7 +91,6 @@ def predict_location():
             return jsonify({"error": "No image files detected"}), 400
 
         best_location, best_score, total_elapsed = None, 0, 0.0
-
         for idx, file in enumerate(images):
             npimg = np.frombuffer(file.read(), np.uint8)
             img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
