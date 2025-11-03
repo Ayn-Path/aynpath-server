@@ -28,7 +28,7 @@ if not os.path.exists(FEATURES_DIR):
     print("Features extracted successfully!\n")
 
 # --- Config ---
-MAX_DB_DESCRIPTORS = 10000
+MAX_DB_DESCRIPTORS = 50000
 RATIO_THRESH = 0.75
 orb = cv2.ORB_create(nfeatures=500)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
@@ -48,7 +48,7 @@ for file in os.listdir(FEATURES_DIR):
         db_features[loc] = descriptors
         print(f"Loaded {loc}: {descriptors.shape[0]} descriptors")
 
-print(f"\n✅ Database loaded. Total locations: {len(db_features)}\n")
+print(f"\nDatabase loaded. Total locations: {len(db_features)}\n")
 
 # --- Flask App ---
 app = Flask(__name__)
@@ -80,14 +80,14 @@ def recognize_location_from_image(img):
 def predict_location():
     try:
         if not request.files:
-            print("❌ No image uploaded")
+            print("No image uploaded")
             return jsonify({"error": "No image uploaded"}), 400
 
         # Collect images in order image0, image1, ...
         images = [request.files[f"image{i}"] for i in range(10) if f"image{i}" in request.files]
 
         if not images:
-            print("❌ No image files detected")
+            print("No image files detected")
             return jsonify({"error": "No image files detected"}), 400
 
         best_location, best_score, total_elapsed = None, 0, 0.0
@@ -96,7 +96,7 @@ def predict_location():
             npimg = np.frombuffer(file.read(), np.uint8)
             img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
             if img is None:
-                print(f"⚠️ Skipping invalid image {idx}")
+                print(f"Skipping invalid image {idx}")
                 continue
 
             loc, score, elapsed = recognize_location_from_image(img)
@@ -113,9 +113,9 @@ def predict_location():
             "elapsed_time_sec": round(total_elapsed, 2)
         }
 
-        print("✅ Returning response:", response)
+        print("Returning response:", response)
         return jsonify(response), 200
 
     except Exception as e:
-        print(f"🔥 Error during prediction: {e}")
+        print(f"Error during prediction: {e}")
         return jsonify({"error": str(e)}), 500
