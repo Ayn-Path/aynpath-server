@@ -59,7 +59,9 @@ print("\nDatabase loaded successfully!")
 print(f"Total locations: {len(db_features)}\n")
 
 # --- Flask App ---
+from flask_cors import CORS
 app = Flask(__name__)
+CORS(app)
 
 def recognize_location_from_image(img):
     start_time = time.time()
