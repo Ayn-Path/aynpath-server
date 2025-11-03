@@ -80,12 +80,14 @@ def recognize_location_from_image(img):
 def predict_location():
     try:
         if not request.files:
+            print("❌ No image uploaded")
             return jsonify({"error": "No image uploaded"}), 400
 
         # Collect images in order image0, image1, ...
         images = [request.files[f"image{i}"] for i in range(10) if f"image{i}" in request.files]
 
         if not images:
+            print("❌ No image files detected")
             return jsonify({"error": "No image files detected"}), 400
 
         best_location, best_score, total_elapsed = None, 0, 0.0
@@ -94,18 +96,26 @@ def predict_location():
             npimg = np.frombuffer(file.read(), np.uint8)
             img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
             if img is None:
+                print(f"⚠️ Skipping invalid image {idx}")
                 continue
+
             loc, score, elapsed = recognize_location_from_image(img)
             total_elapsed += elapsed
+            print(f"Processed image{idx}: predicted={loc}, good_matches={score}, time={elapsed:.2f}s")
+
             if score > best_score:
                 best_score = score
                 best_location = loc
 
-        return jsonify({
+        response = {
             "predicted_location": best_location or "Unknown",
             "good_matches": int(best_score),
             "elapsed_time_sec": round(total_elapsed, 2)
-        }), 200
+        }
+
+        print("✅ Returning response:", response)
+        return jsonify(response), 200
 
     except Exception as e:
+        print(f"🔥 Error during prediction: {e}")
         return jsonify({"error": str(e)}), 500
