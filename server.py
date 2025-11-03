@@ -3,21 +3,41 @@ import cv2
 import numpy as np
 import time
 import zipfile
+import gdown
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # === Config ===
 FEATURES_DIR = "features_npz"
+ZIP_PATH = "features_npz.zip"
+DRIVE_FILE_ID = "12jW_xT_ukUGa4TO5UL54prg6GP_ja-8c"
 MAX_DB_DESCRIPTORS = 200000
 RATIO_THRESH = 0.75
 
 orb = cv2.ORB_create(nfeatures=2000)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
 
+# --- Download and extract features if missing ---
+if not os.path.exists(FEATURES_DIR):
+    print("📥 Features folder not found. Downloading from Google Drive...")
+    url = f"https://drive.google.com/uc?id={DRIVE_FILE_ID}"
+    gdown.download(url, ZIP_PATH, quiet=False)
+
+    print("🔍 Validating zip file...")
+    if not zipfile.is_zipfile(ZIP_PATH):
+        raise RuntimeError("Downloaded file is not a valid ZIP!")
+
+    print("📂 Extracting features...")
+    with zipfile.ZipFile(ZIP_PATH, 'r') as zip_ref:
+        zip_ref.extractall(".")
+    print("✅ Features extracted successfully!\n")
+else:
+    print("✅ Features folder already exists, skipping download.")
+
 # --- Load database ---
 db_features = {}
 if not os.path.exists(FEATURES_DIR):
-    raise FileNotFoundError(f"{FEATURES_DIR} folder not found. Upload it manually in Render!")
+    raise FileNotFoundError(f"{FEATURES_DIR} folder not found even after extraction!")
 
 for file in os.listdir(FEATURES_DIR):
     if file.endswith("_features.npz"):
@@ -32,11 +52,11 @@ for file in os.listdir(FEATURES_DIR):
         except Exception as e:
             print(f"Error loading {file}: {e}")
 
-print(f"✅ Database loaded. Total locations: {len(db_features)}")
+print(f"✅ Database loaded. Total locations: {len(db_features)}\n")
 
 # --- Flask app ---
 app = Flask(__name__)
-CORS(app)  # Allow Flutter/web requests
+CORS(app)
 
 def recognize_location_from_image(img):
     start_time = time.time()
@@ -67,9 +87,8 @@ def predict_location():
             print("❌ No files received.")
             return jsonify({"error": "No image uploaded"}), 400
 
-        # Get images in order: image0, image1, image2, ...
         images = []
-        for i in range(10):  # allow up to image9
+        for i in range(10):
             key = f"image{i}"
             if key in request.files:
                 images.append(request.files[key])
@@ -110,5 +129,4 @@ def predict_location():
 
 if __name__ == '__main__':
     print("🚀 Starting Flask server on 0.0.0.0:5000")
-    # debug=False for production (Render)
     app.run(host='0.0.0.0', port=5000, debug=False)
