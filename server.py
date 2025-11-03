@@ -7,7 +7,7 @@ import zipfile
 from flask import Flask, request, jsonify
 
 # It will download features_npz from Google Drive
-DRIVE_ZIP_URL = "https://drive.google.com/uc?export=download&id=1AR-lH0Gr-rXs8K86PahyrAYH6182p8iT"
+DRIVE_ZIP_URL = "https://drive.google.com/file/d/12jW_xT_ukUGa4TO5UL54prg6GP_ja-8c/view?usp=sharing"
 ZIP_PATH = "features_npz.zip"
 FEATURES_DIR = "features_npz"
 
