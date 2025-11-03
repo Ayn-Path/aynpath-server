@@ -6,22 +6,45 @@ import requests
 import zipfile
 from flask import Flask, request, jsonify
 
-# It will download features_npz from Google Drive
-DRIVE_ZIP_URL = "https://drive.google.com/uc?export=download&id=12jW_xT_ukUGa4TO5UL54prg6GP_ja-8c"
+# === Google Drive ZIP setup ===
+DRIVE_FILE_ID = "12jW_xT_ukUGa4TO5UL54prg6GP_ja-8c"
 ZIP_PATH = "features_npz.zip"
 FEATURES_DIR = "features_npz"
 
-if not os.path.exists(FEATURES_DIR):
-    print("Downloading features from Google Drive...")
-    r = requests.get(DRIVE_ZIP_URL, stream=True)
-    with open(ZIP_PATH, "wb") as f:
-        for chunk in r.iter_content(chunk_size=8192):
+def download_file_from_google_drive(file_id, destination):
+    URL = "https://docs.google.com/uc?export=download"
+    session = requests.Session()
+
+    response = session.get(URL, params={'id': file_id}, stream=True)
+    token = get_confirm_token(response)
+
+    if token:
+        params = {'id': file_id, 'confirm': token}
+        response = session.get(URL, params=params, stream=True)
+
+    save_response_content(response, destination)
+
+def get_confirm_token(response):
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            return value
+    return None
+
+def save_response_content(response, destination):
+    CHUNK_SIZE = 32768
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(CHUNK_SIZE):
             if chunk:
                 f.write(chunk)
+
+# --- Download and extract ZIP if missing ---
+if not os.path.exists(FEATURES_DIR):
+    print("Downloading features from Google Drive...")
+    download_file_from_google_drive(DRIVE_FILE_ID, ZIP_PATH)
     print("Extracting zip...")
     with zipfile.ZipFile(ZIP_PATH, 'r') as zip_ref:
         zip_ref.extractall(".")
-    print("Features extracted successfully!\n")
+    print("✅ Features extracted successfully!\n")
 
 # --- Configuration ---
 MAX_DB_DESCRIPTORS = 200000
@@ -65,7 +88,10 @@ def recognize_location_from_image(img):
     best_loc, best_score = None, 0
     for loc, des_db in db_features.items():
         matches = bf.knnMatch(des_query, des_db, k=2)
-        good_matches = [m_n[0] for m_n in matches if len(m_n) == 2 and m_n[0].distance < RATIO_THRESH * m_n[1].distance]
+        good_matches = [
+            m_n[0] for m_n in matches
+            if len(m_n) == 2 and m_n[0].distance < RATIO_THRESH * m_n[1].distance
+        ]
         score = len(good_matches)
         if score > best_score:
             best_score = score
