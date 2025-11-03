@@ -2,57 +2,38 @@ import os
 import cv2
 import numpy as np
 import time
-import zipfile
-import gdown
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# === Google Drive ZIP setup ===
-DRIVE_FILE_ID = "12jW_xT_ukUGa4TO5UL54prg6GP_ja-8c"
-ZIP_PATH = "features_npz.zip"
+# === Config ===
 FEATURES_DIR = "features_npz"
-
-# --- Download and extract ZIP if missing ---
-if not os.path.exists(FEATURES_DIR):
-    print("Downloading features from Google Drive using gdown...")
-    url = f"https://drive.google.com/uc?id={DRIVE_FILE_ID}"
-    gdown.download(url, ZIP_PATH, quiet=False)
-
-    # --- Validate ZIP before extraction ---
-    if not zipfile.is_zipfile(ZIP_PATH):
-        raise RuntimeError("Downloaded file is not a valid ZIP.")
-
-    print("Extracting zip...")
-    with zipfile.ZipFile(ZIP_PATH, 'r') as zip_ref:
-        zip_ref.extractall(".")
-    print("Features extracted successfully!\n")
-
-# --- Config ---
-MAX_DB_DESCRIPTORS = 30000
+MAX_DB_DESCRIPTORS = 50000  # Can now safely increase
 RATIO_THRESH = 0.75
 orb = cv2.ORB_create(nfeatures=1000)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
 
-# --- Load database ---
-db_features = {}
-if not os.path.exists(FEATURES_DIR):
-    raise FileNotFoundError(f"{FEATURES_DIR} folder not found!")
-
+# --- Load list of available locations only ---
+available_locations = []
 for file in os.listdir(FEATURES_DIR):
     if file.endswith("_features.npz"):
         loc = file.replace("_features.npz", "")
-        data = np.load(os.path.join(FEATURES_DIR, file), allow_pickle=True)
-        descriptors = data["descriptors"]
-        if descriptors.shape[0] > MAX_DB_DESCRIPTORS:
-            descriptors = descriptors[:MAX_DB_DESCRIPTORS]
-        db_features[loc] = descriptors
-        print(f"Loaded {loc}: {descriptors.shape[0]} descriptors")
+        available_locations.append(loc)
+print(f"✅ Available locations: {available_locations}")
 
-print(f"\nDatabase loaded. Total locations: {len(db_features)}\n")
+# --- Cache for descriptors (lazy-load) ---
+db_cache = {}
 
-# --- Flask App ---
-app = Flask(__name__)
-CORS(app)  # Allow Flutter/web requests
+def load_descriptors(loc):
+    """Load descriptors for a location, limit by MAX_DB_DESCRIPTORS."""
+    if loc in db_cache:
+        return db_cache[loc]
+    path = os.path.join(FEATURES_DIR, f"{loc}_features.npz")
+    data = np.load(path, allow_pickle=True)
+    des = data["descriptors"]
+    if des.shape[0] > MAX_DB_DESCRIPTORS:
+        des = des[:MAX_DB_DESCRIPTORS]
+    db_cache[loc] = des
+    return des
 
 def recognize_location_from_image(img):
     start_time = time.time()
@@ -63,7 +44,9 @@ def recognize_location_from_image(img):
         return None, 0, time.time() - start_time
 
     best_loc, best_score = None, 0
-    for loc, des_db in db_features.items():
+    # Lazy-load descriptors per location
+    for loc in available_locations:
+        des_db = load_descriptors(loc)
         matches = bf.knnMatch(des_query, des_db, k=2)
         good_matches = [
             m[0] for m in matches
@@ -76,18 +59,18 @@ def recognize_location_from_image(img):
 
     return best_loc, best_score, time.time() - start_time
 
+# --- Flask app ---
+app = Flask(__name__)
+CORS(app)
+
 @app.route('/predict_location', methods=['POST'])
 def predict_location():
     try:
         if not request.files:
-            print("No image uploaded")
             return jsonify({"error": "No image uploaded"}), 400
 
-        # Collect images in order image0, image1, ...
         images = [request.files[f"image{i}"] for i in range(10) if f"image{i}" in request.files]
-
         if not images:
-            print("No image files detected")
             return jsonify({"error": "No image files detected"}), 400
 
         best_location, best_score, total_elapsed = None, 0, 0.0
@@ -96,26 +79,22 @@ def predict_location():
             npimg = np.frombuffer(file.read(), np.uint8)
             img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
             if img is None:
-                print(f"Skipping invalid image {idx}")
                 continue
-
             loc, score, elapsed = recognize_location_from_image(img)
             total_elapsed += elapsed
-            print(f"Processed image{idx}: predicted={loc}, good_matches={score}, time={elapsed:.2f}s")
-
             if score > best_score:
                 best_score = score
                 best_location = loc
 
-        response = {
+        return jsonify({
             "predicted_location": best_location or "Unknown",
             "good_matches": int(best_score),
             "elapsed_time_sec": round(total_elapsed, 2)
-        }
-
-        print("Returning response:", response)
-        return jsonify(response), 200
+        }), 200
 
     except Exception as e:
-        print(f"Error during prediction: {e}")
         return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    print("🚀 Starting Flask server on 0.0.0.0:5000")
+    app.run(host='0.0.0.0', port=5000, debug=False)
