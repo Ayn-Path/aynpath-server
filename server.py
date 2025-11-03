@@ -2,8 +2,8 @@ import os
 import cv2
 import numpy as np
 import time
-import requests
 import zipfile
+import gdown
 from flask import Flask, request, jsonify
 
 # === Google Drive ZIP setup ===
@@ -11,40 +11,21 @@ DRIVE_FILE_ID = "12jW_xT_ukUGa4TO5UL54prg6GP_ja-8c"
 ZIP_PATH = "features_npz.zip"
 FEATURES_DIR = "features_npz"
 
-def download_file_from_google_drive(file_id, destination):
-    URL = "https://docs.google.com/uc?export=download"
-    session = requests.Session()
-
-    response = session.get(URL, params={'id': file_id}, stream=True)
-    token = get_confirm_token(response)
-
-    if token:
-        params = {'id': file_id, 'confirm': token}
-        response = session.get(URL, params=params, stream=True)
-
-    save_response_content(response, destination)
-
-def get_confirm_token(response):
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            return value
-    return None
-
-def save_response_content(response, destination):
-    CHUNK_SIZE = 32768
-    with open(destination, "wb") as f:
-        for chunk in response.iter_content(CHUNK_SIZE):
-            if chunk:
-                f.write(chunk)
-
 # --- Download and extract ZIP if missing ---
 if not os.path.exists(FEATURES_DIR):
-    print("Downloading features from Google Drive...")
-    download_file_from_google_drive(DRIVE_FILE_ID, ZIP_PATH)
+    print("Downloading features from Google Drive using gdown...")
+    url = f"https://drive.google.com/uc?id={DRIVE_FILE_ID}"
+    gdown.download(url, ZIP_PATH, quiet=False)
+
+    # --- Validate the ZIP file before extraction ---
+    print("Validating zip file...")
+    if not zipfile.is_zipfile(ZIP_PATH):
+        raise RuntimeError("Downloaded file is not a valid ZIP. Please check your Google Drive file.")
+
     print("Extracting zip...")
     with zipfile.ZipFile(ZIP_PATH, 'r') as zip_ref:
         zip_ref.extractall(".")
-    print("✅ Features extracted successfully!\n")
+    print("Features extracted successfully!\n")
 
 # --- Configuration ---
 MAX_DB_DESCRIPTORS = 200000
@@ -55,6 +36,9 @@ bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
 
 # --- Load database ---
 db_features = {}
+if not os.path.exists(FEATURES_DIR):
+    raise FileNotFoundError(f"{FEATURES_DIR} folder not found after extraction!")
+
 for file in os.listdir(FEATURES_DIR):
     if file.endswith("_features.npz"):
         loc = file.replace("_features.npz", "")
@@ -69,7 +53,7 @@ for file in os.listdir(FEATURES_DIR):
             print(f"Loaded {loc}: {descriptors.shape[0]} descriptors")
 
         except Exception as e:
-            print(f"❌ Error loading {file}: {e}")
+            print(f"Error loading {file}: {e}")
 
 print("\nDatabase loaded successfully!")
 print(f"Total locations: {len(db_features)}\n")
