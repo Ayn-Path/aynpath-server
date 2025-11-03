@@ -5,6 +5,7 @@ import time
 import zipfile
 import gdown
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 # === Google Drive ZIP setup ===
 DRIVE_FILE_ID = "12jW_xT_ukUGa4TO5UL54prg6GP_ja-8c"
@@ -17,7 +18,6 @@ if not os.path.exists(FEATURES_DIR):
     url = f"https://drive.google.com/uc?id={DRIVE_FILE_ID}"
     gdown.download(url, ZIP_PATH, quiet=False)
 
-    # --- Validate the ZIP file before extraction ---
     print("Validating zip file...")
     if not zipfile.is_zipfile(ZIP_PATH):
         raise RuntimeError("Downloaded file is not a valid ZIP. Please check your Google Drive file.")
@@ -59,9 +59,8 @@ print("\nDatabase loaded successfully!")
 print(f"Total locations: {len(db_features)}\n")
 
 # --- Flask App ---
-from flask_cors import CORS
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # Allow Flutter to connect (important!)
 
 def recognize_location_from_image(img):
     start_time = time.time()
@@ -85,38 +84,53 @@ def recognize_location_from_image(img):
 
     return best_loc, best_score, time.time() - start_time
 
+
 @app.route('/predict_location', methods=['POST'])
 def predict_location():
-    images = [f for f in request.files if f.startswith("image")]
-    if not images:
-        return jsonify({"error": "No image uploaded"}), 400
-
-    best_location, best_score, total_elapsed = None, 0, 0.0
     try:
-        for key in images:
+        if not request.files:
+            print("❌ No files received in request.")
+            return jsonify({"error": "No image uploaded"}), 400
+
+        images = [f for f in request.files if f.startswith("image")]
+        if not images:
+            print("❌ No files matching 'image0', 'image1', ...")
+            return jsonify({"error": "No image files detected"}), 400
+
+        print(f"✅ Received {len(images)} images for prediction.")
+
+        best_location, best_score, total_elapsed = None, 0, 0.0
+
+        for key in sorted(images):  # ensure order image0, image1, ...
             file = request.files[key]
             npimg = np.frombuffer(file.read(), np.uint8)
             img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
             if img is None:
+                print(f"⚠️ Skipping invalid image: {key}")
                 continue
+
             loc, score, elapsed = recognize_location_from_image(img)
             total_elapsed += elapsed
+            print(f"Processed {key}: {loc}, matches={score}, time={elapsed:.2f}s")
+
             if score > best_score:
                 best_score = score
                 best_location = loc
 
         response = {
             "predicted_location": best_location or "Unknown",
-            "good_matches": best_score,
+            "good_matches": int(best_score),
             "elapsed_time_sec": round(total_elapsed, 2)
         }
-        print(f"Prediction: {response}")
-        return jsonify(response)
+
+        print("✅ Returning JSON:", response)
+        return jsonify(response), 200
 
     except Exception as e:
-        print(f"Error during prediction: {e}")
+        print(f"🔥 Error during prediction: {e}")
         return jsonify({"error": str(e)}), 500
 
+
 if __name__ == '__main__':
-    print("Starting server on 0.0.0.0:5000")
-    app.run(host='0.0.0.0', port=5000)
+    print("🚀 Starting Flask server on 0.0.0.0:5000")
+    app.run(host='0.0.0.0', port=5000, debug=True)
