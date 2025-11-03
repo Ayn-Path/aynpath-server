@@ -2,8 +2,5 @@ flask
 flask-cors
 opencv-python-headless
 numpy
-pillow
-scikit-learn
-requests
 gdown
 gunicorn
