@@ -8,9 +8,9 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # === Google Drive ZIP setup ===
-DRIVE_FILE_ID = "1WktCwKy8OU8gozqNEH0PcSvRtfjaBrB5"
-ZIP_PATH = "features_npz2.zip"
-FEATURES_DIR = "features_npz2"
+DRIVE_FILE_ID = "1CQSKhmsGqM7aI87suuiwSYDCH4NNfy2B"
+ZIP_PATH = "new_features_npz.zip"
+FEATURES_DIR = "new_features_npz"
 
 # --- Download & extract once ---
 if not os.path.exists(FEATURES_DIR):
@@ -28,9 +28,9 @@ if not os.path.exists(FEATURES_DIR):
     print("Features extracted successfully!\n")
 
 # --- Config ---
-MAX_DB_DESCRIPTORS = 5000
+MAX_DB_DESCRIPTORS = 1500
 RATIO_THRESH = 0.75
-orb = cv2.ORB_create(nfeatures=2000)
+orb = cv2.ORB_create(nfeatures=3000)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
 
 # --- Lazy-load descriptors ---
