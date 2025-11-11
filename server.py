@@ -28,7 +28,7 @@ if not os.path.exists(FEATURES_DIR):
     print("Features extracted successfully!\n")
 
 # --- Config ---
-MAX_DB_DESCRIPTORS = 8500
+MAX_DB_DESCRIPTORS = 8000
 RATIO_THRESH = 0.75
 orb = cv2.ORB_create(nfeatures=3500)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
