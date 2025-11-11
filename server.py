@@ -39,7 +39,7 @@ for file in os.listdir(FEATURES_DIR):
     if file.endswith("_features.npz"):
         loc = file.replace("_features.npz", "")
         available_locations.append(loc)
-print(f"✅ Available locations: {available_locations}")
+print(f"Available locations: {available_locations}")
 
 db_cache = {}
 
@@ -102,7 +102,7 @@ def predict_location():
                 best_score = score
                 best_location = loc
                 
-         print(f"Predicted location: {best_location or 'Unknown'} | Matches: {best_score} | Time: {round(total_elapsed, 2)}s")
+        print(f"Predicted location: {best_location or 'Unknown'} | Matches: {best_score} | Time: {round(total_elapsed, 2)}s")
 
         return jsonify({
             "predicted_location": best_location or "Unknown",
