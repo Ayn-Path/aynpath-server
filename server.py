@@ -9,7 +9,7 @@ from flask_cors import CORS
 
 # === Google Drive ZIP setup ===
 DRIVE_FILE_ID = "1WktCwKy8OU8gozqNEH0PcSvRtfjaBrB5"
-ZIP_PATH = "features_npz.zip"
+ZIP_PATH = "features_npz2.zip"
 FEATURES_DIR = "features_npz2"
 
 # --- Download & extract once ---
