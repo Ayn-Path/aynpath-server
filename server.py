@@ -30,7 +30,7 @@ if not os.path.exists(FEATURES_DIR):
 # --- Config ---
 MAX_DB_DESCRIPTORS = 5000
 RATIO_THRESH = 0.75
-orb = cv2.ORB_create(nfeatures=1000)
+orb = cv2.ORB_create(nfeatures=2500)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
 
 # --- Lazy-load descriptors ---
