@@ -101,6 +101,8 @@ def predict_location():
             if score > best_score:
                 best_score = score
                 best_location = loc
+                
+         print(f"Predicted location: {best_location or 'Unknown'} | Matches: {best_score} | Time: {round(total_elapsed, 2)}s")
 
         return jsonify({
             "predicted_location": best_location or "Unknown",
@@ -112,5 +114,5 @@ def predict_location():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    print("🚀 Starting Flask server on 0.0.0.0:5000")
+    print("Starting Flask server on 0.0.0.0:5000")
     app.run(host='0.0.0.0', port=5000, debug=False)
