@@ -12,7 +12,7 @@ DRIVE_FILE_ID = "1CQSKhmsGqM7aI87suuiwSYDCH4NNfy2B"
 ZIP_PATH = "new_features_npz.zip"
 FEATURES_DIR = "new_features_npz"
 
-# To download & extract the zip file (once only)
+# To download & extract the zip file (only ONCE)
 if not os.path.exists(FEATURES_DIR):
     print("Downloading features from Google Drive using gdown...")
     url = f"https://drive.google.com/uc?id={DRIVE_FILE_ID}"
