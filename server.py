@@ -29,7 +29,7 @@ if not os.path.exists(FEATURES_DIR):
 
 # --- Config ---
 MAX_DB_DESCRIPTORS = 5500
-RATIO_THRESH = 0.75
+RATIO_THRESH = 0.65
 orb = cv2.ORB_create(nfeatures=3500)
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
 
